@@ -1,1 +1,57 @@
-desk pages test
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Desk">
+  <meta name="theme-color" content="#0b0f14">
+  <title>Desk</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">DESK</div>
+    <div id="modeBadge" class="badge">PAPER</div>
+  </header>
+  <main>
+    <section id="setup" class="panel hidden">
+      <h1>Connect data</h1>
+      <p class="muted">Paste a GitHub read-only token for geek7coin/desk. It stays in this phone's localStorage and is never sent anywhere except api.github.com.</p>
+      <label for="tokenInput">Read-only GitHub token</label>
+      <input id="tokenInput" type="password" autocomplete="off" spellcheck="false">
+      <button id="saveToken" type="button">Save token</button>
+      <p id="setupMsg" class="muted"></p>
+    </section>
+    <section id="board" class="hidden">
+      <p class="kicker">PAPER equity</p>
+      <div id="equity" class="money">—</div>
+      <div id="pnl" class="pnl">—</div>
+      <div id="asOf" class="muted">Waiting for snapshots…</div>
+      <canvas id="chart" aria-label="PAPER equity chart"></canvas>
+      <section class="settings">
+        <div><span>Stop</span><strong id="stopPct">—</strong></div>
+        <div><span>Trail</span><strong id="trailPct">—</strong></div>
+        <div><span>Stack</span><strong id="stackPct">—</strong></div>
+        <div><span>Timeout</span><strong id="timeoutH">—</strong></div>
+      </section>
+      <section id="coinCard" class="coin hidden">
+        <div class="kicker">Watching</div>
+        <div id="coinName">—</div>
+        <a id="coinLink" href="#" rel="noopener noreferrer">Open on FOMO</a>
+      </section>
+      <section class="activity">
+        <div class="kicker">Activity</div>
+        <ul id="activity"></ul>
+      </section>
+    </section>
+    <p id="error" class="error hidden"></p>
+  </main>
+  <script src="chart.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
