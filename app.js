@@ -75,15 +75,29 @@
     list.innerHTML = "";
     ((activity && activity.items) || []).slice(0, 8).forEach(function (item) {
       const li = document.createElement("li");
-      li.textContent = item.text || "";
+      if (item.url) {
+        const a = document.createElement("a");
+        a.setAttribute("href", item.url);
+        a.setAttribute("rel", "noopener noreferrer");
+        a.textContent = item.text || item.url;
+        li.appendChild(a);
+      } else {
+        li.textContent = item.text || "";
+      }
       list.appendChild(li);
     });
+    const profile = document.getElementById("profileLink");
+    if (state.profile_url) {
+      profile.setAttribute("href", state.profile_url);
+    }
     const card = document.getElementById("coinCard");
     if (coin) {
       document.getElementById("coinName").textContent = coin.name || coin.symbol || coin.mint;
       const a = document.getElementById("coinLink");
-      a.href = coin.url || "#";
-      a.textContent = "Open on FOMO";
+      if (coin.url) {
+        a.setAttribute("href", coin.url);
+      }
+      a.textContent = coin.button || "Buy on FOMO";
       card.classList.remove("hidden");
     }
   }

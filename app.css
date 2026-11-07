@@ -44,9 +44,25 @@ button {
 .settings span { display: block; color: var(--muted); font-size: 11px; }
 .settings strong { font-size: 18px; }
 .coin { border-top: 1px solid var(--line); padding-top: 14px; margin-bottom: 14px; }
-.coin a { color: var(--up); word-break: break-all; font-size: 13px; }
+.coin a, .account a {
+  display: block;
+  width: 100%;
+  text-align: center;
+  background: var(--up);
+  color: #062112;
+  font-weight: 700;
+  padding: 12px;
+  border-radius: 10px;
+  text-decoration: none;
+  word-break: break-word;
+  font-size: 16px;
+  margin-top: 8px;
+}
+.account { border-top: 1px solid var(--line); padding-top: 14px; margin-bottom: 14px; }
+.account a { background: #1c2530; color: var(--text); font-size: 14px; }
 #coinName { font-weight: 700; margin-bottom: 6px; }
 .activity ul { list-style: none; padding: 0; margin: 0; }
 .activity li { padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.activity a { color: var(--up); text-decoration: none; word-break: break-word; }
 .error { color: var(--down); margin-top: 12px; }
 .hidden { display: none; }
