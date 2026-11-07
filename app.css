@@ -689,3 +689,64 @@ button, input, select {
   .beam { transition: none; }
   .skel { animation: none; opacity: 0.75; }
 }
+
+.coin-stack {
+  position: relative;
+  width: 168px;
+  height: 198px;
+  margin: 8px auto 18px;
+}
+.coin-disc {
+  position: absolute;
+  left: 50%;
+  width: 132px;
+  height: 38px;
+  margin-left: -66px;
+  border-radius: 50%;
+  background: #2c2c2e;
+  border: 1.5px solid #3a3a3c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.coin-disc::before {
+  content: "";
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  top: 5px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  pointer-events: none;
+}
+.coin-disc.ok { background: #12351f; border-color: #00d35a; }
+.coin-disc.bad { background: #3a1412; border-color: #ff453a; }
+.disc-mark {
+  font-size: 16px;
+  font-weight: 700;
+  z-index: 1;
+}
+.coin-disc.ok .disc-mark { color: #00d35a; }
+.coin-disc.bad .disc-mark { color: #ff453a; }
+.coin-beam {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background: #64d2ff;
+  z-index: 20;
+  opacity: 0;
+  pointer-events: none;
+  transition: top 350ms ease, opacity 150ms linear;
+}
+.stat-updated {
+  color: var(--tertiary);
+  font-size: 12px;
+  margin: -4px 0 12px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .coin-beam { transition: none; }
+}

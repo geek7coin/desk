@@ -15,6 +15,7 @@
   const qs = new URLSearchParams(location.search);
   const LOCAL = qs.get("src") === "local";
   const EMPTY = qs.get("empty") === "1";
+  const SNAP_PREFIX = qs.get("pack") === "pos" ? "snap-pos/" : "snap/";
 
   const setup = document.getElementById("setup");
   const appEl = document.getElementById("app");
@@ -38,6 +39,7 @@
   let chartRange = "LIVE";
   let route = { name: "home", mint: null };
   let prevTab = "home";
+  let originTab = "home";
   let odoPrev = "";
   let lastPointN = 0;
   let markFade = 1;
@@ -72,7 +74,7 @@
   async function getJson(relPath) {
     if (failFetches) throw new Error("data fetch failed");
     if (LOCAL) {
-      const res = await fetch("snap/" + relPath + "?n=" + Date.now(), { cache: "no-store" });
+      const res = await fetch(SNAP_PREFIX + relPath + "?n=" + Date.now(), { cache: "no-store" });
       if (!res.ok) throw new Error("data fetch failed");
       return res.json();
     }
@@ -141,12 +143,11 @@
 
   function fmtTime(iso) {
     if (!iso) return "";
+    const wall = String(iso).match(/T(\d{2}:\d{2})/);
+    if (wall) return wall[1];
     const d = new Date(iso);
-    if (isNaN(d.getTime())) {
-      const m = String(iso).match(/T(\d{2}:\d{2})/);
-      return m ? m[1] : String(iso);
-    }
-    return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    if (isNaN(d.getTime())) return String(iso);
+    return d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/Berlin" });
   }
 
   function showToast(text) {
@@ -663,7 +664,7 @@
       if (typeof drawCandles === "function") {
         drawCandles(canvas, {
           candles: coin.candles || [],
-          exitLine: coin.exit && coin.exit.current_exit_line
+          exitLine: (coin.position && coin.exit && coin.exit.current_exit_line != null) ? coin.exit.current_exit_line : null
         });
       }
     });
@@ -677,6 +678,12 @@
       stats.appendChild(box);
     });
     body.appendChild(stats);
+    if (s.updated) {
+      const age = Date.now() - Date.parse(s.updated);
+      if (!isNaN(age) && age > 2 * 60 * 1000) {
+        body.appendChild(el("div", "stat-updated", "updated " + fmtTime(s.updated)));
+      }
+    }
     if (coin.position) {
       const pos = el("article", "full-card");
       pos.appendChild(el("h3", "", "Your position · $" + money(coin.position.size_usd) + " in · Executor"));
@@ -731,15 +738,19 @@
     if (audit.status === "empty" && !known) {
       body.appendChild(el("div", "empty-msg", "No coin taken apart yet"));
     } else {
-      const stack = el("div", "discs");
-      const beam = el("div", "beam");
+      const stack = el("div", "coin-stack");
+      const beam = el("div", "coin-beam");
       stack.appendChild(beam);
       for (let n = 1; n <= 8; n++) {
         const layer = revealed[n];
-        const disc = el("div", "disc", LAYER_NAMES[n]);
+        const disc = el("div", "coin-disc");
         disc.setAttribute("data-n", String(n));
-        if (layer && layer.pass === true) { disc.classList.add("ok"); disc.textContent = LAYER_NAMES[n] + "  ✓"; }
-        if (layer && layer.pass === false) { disc.classList.add("bad"); disc.textContent = LAYER_NAMES[n] + "  ✕"; }
+        disc.style.top = ((n - 1) * 22) + "px";
+        disc.style.zIndex = String(10 - n);
+        const mark = el("span", "disc-mark", "");
+        if (layer && layer.pass === true) { disc.classList.add("ok"); mark.textContent = "✓"; }
+        else if (layer && layer.pass === false) { disc.classList.add("bad"); mark.textContent = "✕"; }
+        disc.appendChild(mark);
         stack.appendChild(disc);
       }
       body.appendChild(stack);
@@ -775,7 +786,7 @@
     const btn = el("a", "fomo-btn", "Open on FOMO");
     applyCoinHref(btn, coin);
     body.appendChild(btn);
-    return body.querySelector(".beam");
+    return body.querySelector(".coin-beam");
   }
 
   async function playAudit(mint) {
@@ -830,13 +841,11 @@
 
   function positionBeam(beam, n, on) {
     if (!beam) return;
-    const disc = document.querySelector('.disc[data-n="' + n + '"]');
+    const disc = document.querySelector('.coin-disc[data-n="' + n + '"]');
     if (!disc) return;
-    const parent = disc.parentElement;
-    beam.style.top = (disc.offsetTop) + "px";
+    const mid = disc.offsetTop + disc.offsetHeight / 2 - 4;
+    beam.style.top = mid + "px";
     beam.style.opacity = on ? "1" : "0";
-    beam.style.height = disc.offsetHeight + "px";
-    if (parent) parent.appendChild; // keep ref used
   }
 
   function showScreen(name) {
@@ -845,12 +854,16 @@
     });
     document.querySelectorAll(".tabbar button").forEach(function (btn) {
       const tab = btn.getAttribute("data-tab");
-      btn.classList.toggle("active", tab === name || (name === "coin" && tab === prevTab) || (name === "audit" && tab === prevTab));
+      const overlay = name === "coin" || name === "audit";
+      btn.classList.toggle("active", overlay ? (tab === originTab) : (tab === name));
     });
   }
 
   function go(name, mint) {
-    if (name === "home" || name === "agents" || name === "activity" || name === "account") prevTab = name;
+    if (name === "home" || name === "agents" || name === "activity" || name === "account") {
+      prevTab = name;
+      if (name === "home" || name === "agents" || name === "activity") originTab = name;
+    }
     route = { name: name, mint: mint || null };
     showScreen(name);
     if (name === "home") renderHome();

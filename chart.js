@@ -122,51 +122,97 @@
     });
   }
 
+  function addMinute(stamp) {
+    const text = String(stamp);
+    const iso = text.length === 16 ? text + ":00" : text;
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return null;
+    d.setMinutes(d.getMinutes() + 1);
+    const pad = function (n) { return (n < 10 ? "0" : "") + n; };
+    const offset = -d.getTimezoneOffset();
+    // keep the same timezone-less minute key YYYY-MM-DDTHH:MM
+    const local = new Date(d.getTime());
+    return local.getFullYear() + "-" + pad(local.getMonth() + 1) + "-" + pad(local.getDate())
+      + "T" + pad(local.getHours()) + ":" + pad(local.getMinutes());
+  }
+
+  function fillCandleGaps(raw) {
+    const src = (raw || []).filter(function (c) { return c && c.t != null; });
+    if (!src.length) return [];
+    const out = [src[0]];
+    for (let i = 1; i < src.length; i++) {
+      const prev = out[out.length - 1];
+      let guard = 0;
+      let next = addMinute(prev.t);
+      while (next && next < src[i].t && guard < 2000) {
+        const px = Number(prev.c);
+        out.push({ t: next, o: px, h: px, l: px, c: px, volume: 0 });
+        next = addMinute(next);
+        guard += 1;
+      }
+      out.push(src[i]);
+    }
+    return out.slice(-1440);
+  }
+
   function drawCandles(canvas, opts) {
     opts = opts || {};
     const sized = sizeCanvas(canvas);
-    const ctx = sized.ctx, w = sized.w, h = sized.h;
+    const ctx = sized.ctx, w = sized.w, h = sized.h, dpr = sized.dpr;
     ctx.clearRect(0, 0, w, h);
-    const candles = opts.candles || [];
+    const candles = fillCandleGaps(opts.candles || []);
     if (!candles.length) return;
-    const padL = 8, padR = 8, padT = 12, padB = 40;
+    const padL = 8, padR = 8, padT = 16, padB = 40;
     const innerW = w - padL - padR;
     const innerH = h - padT - padB;
     const highs = candles.map(function (c) { return Number(c.h); });
     const lows = candles.map(function (c) { return Number(c.l); });
-    if (opts.exitLine != null) {
+    const hasExit = opts.exitLine != null && opts.exitLine !== "" && !isNaN(Number(opts.exitLine));
+    if (hasExit) {
       highs.push(Number(opts.exitLine));
       lows.push(Number(opts.exitLine));
     }
     let min = Math.min.apply(null, lows);
     let max = Math.max.apply(null, highs);
-    if (min === max) { min -= 1; max += 1; }
+    if (min === max) {
+      const pad = Math.abs(min) * 0.01 || 1;
+      min -= pad;
+      max += pad;
+    }
     function yAt(v) { return padT + (1 - (v - min) / (max - min)) * innerH; }
+    function snap(v) { return Math.round(v * dpr) / dpr; }
+    function px(v) { return Math.max(1 / dpr, Math.round(v * dpr) / dpr); }
     const slot = innerW / candles.length;
+    const bodyW = Math.max(1 / dpr, slot * 0.6);
+    const minBody = 1 / dpr;
     const volMax = Math.max.apply(null, candles.map(function (c) { return Math.abs(Number(c.volume) || 0); }).concat([0]));
     candles.forEach(function (c, i) {
       const o = Number(c.o), cl = Number(c.c), hi = Number(c.h), lo = Number(c.l);
+      if (![o, cl, hi, lo].every(function (n) { return Number.isFinite(n); })) return;
       const up = cl >= o;
-      ctx.strokeStyle = up ? "#00d35a" : "#ff453a";
       ctx.fillStyle = up ? "#00d35a" : "#ff453a";
       const x = padL + i * slot + slot / 2;
-      ctx.beginPath();
-      ctx.moveTo(x, yAt(hi));
-      ctx.lineTo(x, yAt(lo));
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      const top = yAt(Math.max(o, cl));
-      const bot = yAt(Math.min(o, cl));
-      ctx.fillRect(x - Math.max(1, slot * 0.3), top, Math.max(2, slot * 0.6), Math.max(1, bot - top));
+      const yHigh = yAt(Math.max(hi, o, cl, lo));
+      const yLow = yAt(Math.min(lo, o, cl, hi));
+      ctx.fillRect(snap(x - minBody / 2), snap(yHigh), minBody, px(yLow - yHigh));
+      let top = yAt(Math.max(o, cl));
+      let bot = yAt(Math.min(o, cl));
+      if (bot - top < minBody) {
+        const mid = (top + bot) / 2;
+        top = mid - minBody / 2;
+        bot = mid + minBody / 2;
+      }
+      const bw = px(bodyW);
+      ctx.fillRect(snap(x - bw / 2), snap(top), bw, px(bot - top));
       const vol = Math.abs(Number(c.volume) || 0);
-      if (volMax > 0) {
+      if (volMax > 0 && vol > 0) {
         const vh = (vol / volMax) * (padB - 8);
         ctx.globalAlpha = 0.45;
-        ctx.fillRect(x - Math.max(1, slot * 0.3), h - 4 - vh, Math.max(2, slot * 0.6), vh);
+        ctx.fillRect(snap(x - bw / 2), snap(h - 4 - vh), bw, px(vh));
         ctx.globalAlpha = 1;
       }
     });
-    if (opts.exitLine != null && !isNaN(Number(opts.exitLine))) {
+    if (hasExit) {
       const y = yAt(Number(opts.exitLine));
       ctx.save();
       ctx.setLineDash([5, 4]);
