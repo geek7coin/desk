@@ -122,37 +122,67 @@
     });
   }
 
-  function addMinute(stamp) {
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+
+  function minuteKey(d) {
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate())
+      + "T" + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+  }
+
+  function parseMinute(stamp) {
     const text = String(stamp);
-    const iso = text.length === 16 ? text + ":00" : text;
+    const iso = text.length >= 16 ? text.slice(0, 16) + ":00" : text;
     const d = new Date(iso);
-    if (isNaN(d.getTime())) return null;
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function addMinute(stamp) {
+    const d = parseMinute(stamp);
+    if (!d) return null;
     d.setMinutes(d.getMinutes() + 1);
-    const pad = function (n) { return (n < 10 ? "0" : "") + n; };
-    const offset = -d.getTimezoneOffset();
-    // keep the same timezone-less minute key YYYY-MM-DDTHH:MM
-    const local = new Date(d.getTime());
-    return local.getFullYear() + "-" + pad(local.getMonth() + 1) + "-" + pad(local.getDate())
-      + "T" + pad(local.getHours()) + ":" + pad(local.getMinutes());
+    return minuteKey(d);
   }
 
   function fillCandleGaps(raw) {
-    const src = (raw || []).filter(function (c) { return c && c.t != null; });
+    const src = (raw || []).filter(function (c) { return c && c.t != null; }).slice();
+    src.sort(function (a, b) {
+      return String(a.t) < String(b.t) ? -1 : String(a.t) > String(b.t) ? 1 : 0;
+    });
     if (!src.length) return [];
-    const out = [src[0]];
-    for (let i = 1; i < src.length; i++) {
-      const prev = out[out.length - 1];
-      let guard = 0;
-      let next = addMinute(prev.t);
-      while (next && next < src[i].t && guard < 2000) {
-        const px = Number(prev.c);
-        out.push({ t: next, o: px, h: px, l: px, c: px, volume: 0 });
-        next = addMinute(next);
-        guard += 1;
-      }
-      out.push(src[i]);
+    const firstReal = String(src[0].t).slice(0, 16);
+    const lastReal = String(src[src.length - 1].t).slice(0, 16);
+    const nowKey = minuteKey(new Date());
+    const end = nowKey >= lastReal ? nowKey : lastReal;
+    const endDate = parseMinute(end);
+    if (!endDate) return src.slice();
+    const sixtyDate = new Date(endDate.getTime());
+    sixtyDate.setMinutes(sixtyDate.getMinutes() - 60);
+    const sixtyKey = minuteKey(sixtyDate);
+    const start = firstReal >= sixtyKey ? firstReal : sixtyKey;
+    const byT = {};
+    src.forEach(function (c) { byT[String(c.t).slice(0, 16)] = c; });
+    let seed = null;
+    for (let i = 0; i < src.length; i++) {
+      if (String(src[i].t).slice(0, 16) <= start) seed = src[i];
+      else break;
     }
-    return out.slice(-1440);
+    const out = [];
+    let t = start;
+    let lastClose = seed && Number.isFinite(Number(seed.c)) ? Number(seed.c) : null;
+    let guard = 0;
+    while (t && t <= end && guard < 2000) {
+      const real = byT[t];
+      if (real) {
+        out.push(real);
+        const close = Number(real.c);
+        if (Number.isFinite(close)) lastClose = close;
+      } else if (lastClose != null) {
+        out.push({ t: t, o: lastClose, h: lastClose, l: lastClose, c: lastClose, volume: 0 });
+      }
+      t = addMinute(t);
+      guard += 1;
+    }
+    return out;
   }
 
   function drawCandles(canvas, opts) {

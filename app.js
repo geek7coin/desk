@@ -728,7 +728,7 @@
     return map;
   }
 
-  function renderAuditFrame(mint, revealed) {
+  function renderAuditFrame(mint, revealed, running) {
     const body = document.getElementById("auditBody");
     body.textContent = "";
     const audit = store.audits[mint] || { layers: emptyLayers(), status: "empty", headline: "No coin taken apart yet", name: mint };
@@ -765,7 +765,17 @@
         const layer = revealed[n];
         const row = el("div", "value-row");
         row.appendChild(el("span", "k", LAYER_NAMES[n]));
-        row.appendChild(el("span", "", layer ? (layer.value || "") : "…"));
+        let text;
+        let cls = "";
+        if (layer) {
+          text = layer.value || "";
+        } else if (running === n) {
+          text = "…";
+        } else {
+          text = "not checked";
+          cls = "not-checked";
+        }
+        row.appendChild(el("span", cls, text));
         rows.appendChild(row);
       }
       body.appendChild(rows);
@@ -817,7 +827,7 @@
       let sent = sentLayersFor(mint);
       let guard = 0;
       while (!sent[n] && guard < 8) {
-        const beam = renderAuditFrame(mint, revealed);
+        const beam = renderAuditFrame(mint, revealed, n);
         positionBeam(beam, n, true);
         await wait(350);
         try { store.audits[mint] = await getJson("audit/" + mint + ".json"); store.stream = await getJson("stream.json"); } catch (e) {}
@@ -825,7 +835,7 @@
         guard += 1;
       }
       if (!sent[n]) break;
-      const beam = renderAuditFrame(mint, revealed);
+      const beam = renderAuditFrame(mint, revealed, n);
       positionBeam(beam, n, true);
       await wait(350);
       revealed[n] = sent[n];

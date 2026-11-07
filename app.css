@@ -558,6 +558,7 @@ button, input, select {
   font-size: 14px;
 }
 .value-row .k { color: var(--secondary); }
+.value-row .not-checked { color: var(--tertiary); }
 .headline { font-size: 20px; font-weight: 700; margin: 8px 0 4px; }
 .subhead { color: var(--secondary); margin: 0 0 16px; }
 .fomo-btn, a.fomo-btn {
