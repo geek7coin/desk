@@ -90,6 +90,7 @@
     if (t) headers.Authorization = "Bearer " + t;
     const res = await fetch(url, { headers: headers, cache: "no-store" });
     if (res.status === 401 || res.status === 403) throw new Error("GitHub token needed or rate-limited");
+    if (res.status === 404 && t) { localStorage.removeItem(PATH_KEY); }
     if (!res.ok) throw new Error("data fetch failed");
     const body = await res.json();
     const text = atob((body.content || "").replace(/\n/g, ""));
@@ -1095,11 +1096,46 @@
     appEl.classList.remove("hidden");
   }
 
+  async function discoverDataPath() {
+    const t = token();
+    if (!t) return "no-token";
+    let res;
+    try {
+      res = await fetch("https://api.github.com/repos/" + REPO + "/contents/d?ref=" + REF, {
+        headers: {
+          "Accept": "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+          "Authorization": "Bearer " + t
+        },
+        cache: "no-store"
+      });
+    } catch (e) { return "network"; }
+    if (res.status === 401 || res.status === 404) return "bad-token";
+    if (res.status === 403) return "rate";
+    if (!res.ok) return "network";
+    const list = await res.json();
+    const dirs = Array.isArray(list) ? list.filter(function (x) { return x.type === "dir"; }) : [];
+    if (dirs.length !== 1) return "no-folder";
+    localStorage.setItem(PATH_KEY, dirs[0].name);
+    return "ok";
+  }
+
   async function boot() {
     captureHash();
     if (!LOCAL && !dataPath()) {
-      showSetup("Open this app once with #d=… in the URL so it can remember the data path.");
-      return;
+      const r = await discoverDataPath();
+      if (r !== "ok") {
+        const msgs = {
+          "no-token": "Paste your read-only token to connect.",
+          "bad-token": "That token can't read geek7coin/desk-data (GitHub said 401/404). Check it has Contents: Read-only on desk-data, then paste it again.",
+          "rate": "GitHub refused the request (rate limit or permissions). Try again in a minute.",
+          "network": "Couldn't reach GitHub. Check your connection and try again.",
+          "no-folder": "Token works, but no desk data was found yet. Try again in a minute."
+        };
+        if (r === "bad-token") localStorage.removeItem(TOKEN_KEY);
+        showSetup(msgs[r]);
+        return;
+      }
     }
     showApp();
     try {
