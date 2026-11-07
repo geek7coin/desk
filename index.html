@@ -7,55 +7,163 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Desk">
-  <meta name="theme-color" content="#0b0f14">
-  <title>Desk</title>
+  <meta name="apple-mobile-web-app-title" content="Grok Bot">
+  <meta name="theme-color" content="#000000">
+  <title>Grok Bot</title>
   <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="app.css">
 </head>
 <body>
-  <header class="top">
-    <div class="brand">DESK</div>
-    <div id="modeBadge" class="badge">PAPER</div>
-  </header>
-  <main>
-    <section id="setup" class="panel hidden">
-      <h1>Connect data</h1>
-      <p class="muted">Paste a GitHub read-only token for geek7coin/desk. It stays in this phone's localStorage and is never sent anywhere except api.github.com.</p>
-      <label for="tokenInput">Read-only GitHub token</label>
-      <input id="tokenInput" type="password" autocomplete="off" spellcheck="false">
-      <button id="saveToken" type="button">Save token</button>
-      <p id="setupMsg" class="muted"></p>
+  <div id="setup" class="setup hidden">
+    <h1>Connect data</h1>
+    <p class="secondary">Paste a GitHub read-only token for geek7coin/desk. It stays in this phone's localStorage and is never sent anywhere except api.github.com.</p>
+    <label for="tokenInput">Read-only GitHub token</label>
+    <input id="tokenInput" type="password" autocomplete="off" spellcheck="false">
+    <button id="saveToken" type="button" class="primary-btn">Save token</button>
+    <p id="setupMsg" class="secondary"></p>
+  </div>
+
+  <div id="app" class="hidden">
+    <div id="errorBanner" class="error-banner hidden" role="status"></div>
+
+    <section id="screen-home" class="screen" data-screen="home">
+      <header class="navbar">
+        <button type="button" id="avatarBtn" class="avatar" aria-label="Account">G</button>
+        <button type="button" id="brandBtn" class="brand">Grok Bot ›</button>
+        <button type="button" id="searchBtn" class="icon-btn" aria-label="Search">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 16l5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <button type="button" id="bellBtn" class="icon-btn" aria-label="Notifications">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 17h12l-1.2-1.2V11a4.8 4.8 0 0 0-3.3-4.55V6a1.5 1.5 0 0 0-3 0v.45A4.8 4.8 0 0 0 7.2 11v4.8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 17a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span id="bellDot" class="bell-dot hidden"></span>
+        </button>
+      </header>
+      <div class="error-slot hidden"></div>
+      <div id="homeLoading" class="skels">
+        <div class="skel skel-balance"></div>
+        <div class="skel skel-chart"></div>
+        <div class="skel skel-card"></div>
+      </div>
+      <div id="homeBody" class="hidden">
+        <div class="balance-row">
+          <div id="balanceOdo" class="odometer" aria-label="Balance"></div>
+          <span id="paperBadgeHome" class="paper-badge hidden">PAPER</span>
+        </div>
+        <div class="pnl-row">
+          <span id="todayPct" class="today">+0.00%</span>
+          <span id="multiplier" class="multi">1.00×</span>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="homeChart" aria-label="Balance chart"></canvas>
+          <div id="chartEmpty" class="chart-empty hidden">Waiting for the first trade</div>
+        </div>
+        <div id="rangeSwitch" class="range-switch" role="tablist">
+          <button type="button" data-range="LIVE">LIVE</button>
+          <button type="button" data-range="1H">1H</button>
+          <button type="button" data-range="4H">4H</button>
+          <button type="button" data-range="1D">1D</button>
+          <button type="button" data-range="1W">1W</button>
+          <button type="button" data-range="ALL">ALL</button>
+        </div>
+        <div class="section-head">
+          <h2 id="agentsHeading">Agents · 5 running</h2>
+        </div>
+        <div id="agentCarousel" class="carousel"></div>
+        <div class="section-head">
+          <h2>Activity</h2>
+          <button type="button" id="seeAllActivity" class="text-btn">See all</button>
+        </div>
+        <div id="homeActivity" class="activity-list"></div>
+      </div>
     </section>
-    <section id="board" class="hidden">
-      <p class="kicker">PAPER equity</p>
-      <div id="equity" class="money">—</div>
-      <div id="pnl" class="pnl">—</div>
-      <div id="asOf" class="muted">Waiting for snapshots…</div>
-      <canvas id="chart" aria-label="PAPER equity chart"></canvas>
-      <section class="settings">
-        <div><span>Stop</span><strong id="stopPct">—</strong></div>
-        <div><span>Trail</span><strong id="trailPct">—</strong></div>
-        <div><span>Stack</span><strong id="stackPct">—</strong></div>
-        <div><span>Timeout</span><strong id="timeoutH">—</strong></div>
-      </section>
-      <section id="coinCard" class="coin hidden">
-        <div class="kicker">Coin</div>
-        <div id="coinName">—</div>
-        <a id="coinLink" href="#" rel="noopener noreferrer">Buy on FOMO</a>
-      </section>
-      <section id="account" class="account">
-        <div class="kicker">Account</div>
-        <a id="profileLink" href="#" rel="noopener noreferrer">Your FOMO profile</a>
-      </section>
-      <section class="activity">
-        <div class="kicker">Activity</div>
-        <ul id="activity"></ul>
-      </section>
+
+    <section id="screen-agents" class="screen hidden" data-screen="agents">
+      <header class="navbar">
+        <h1 class="nav-title">Agents</h1>
+      </header>
+      <div class="error-slot hidden"></div>
+      <div id="agentsLoading" class="skels">
+        <div class="skel skel-card"></div>
+        <div class="skel skel-card"></div>
+      </div>
+      <div id="agentsBody" class="stack hidden"></div>
     </section>
-    <p id="error" class="error hidden"></p>
-  </main>
+
+    <section id="screen-activity" class="screen hidden" data-screen="activity">
+      <header class="navbar">
+        <h1 class="nav-title">Activity</h1>
+      </header>
+      <div class="error-slot hidden"></div>
+      <div id="activityLoading" class="skels">
+        <div class="skel skel-row"></div>
+        <div class="skel skel-row"></div>
+        <div class="skel skel-row"></div>
+      </div>
+      <div id="activityBody" class="activity-list hidden"></div>
+    </section>
+
+    <section id="screen-account" class="screen hidden" data-screen="account">
+      <header class="navbar">
+        <h1 class="nav-title">Account</h1>
+      </header>
+      <div class="error-slot hidden"></div>
+      <div id="accountLoading" class="skels">
+        <div class="skel skel-card"></div>
+        <div class="skel skel-row"></div>
+      </div>
+      <div id="accountBody" class="stack hidden"></div>
+    </section>
+
+    <section id="screen-coin" class="screen hidden" data-screen="coin">
+      <header class="navbar">
+        <button type="button" id="coinBack" class="icon-btn" aria-label="Back">‹</button>
+        <div class="nav-mid">
+          <h1 id="coinTitle" class="nav-title">Coin</h1>
+          <span id="paperBadgeCoin" class="paper-badge hidden">PAPER</span>
+        </div>
+        <span class="icon-btn spacer"></span>
+      </header>
+      <div class="error-slot hidden"></div>
+      <div id="coinLoading" class="skels">
+        <div class="skel skel-balance"></div>
+        <div class="skel skel-chart"></div>
+      </div>
+      <div id="coinBody" class="stack hidden"></div>
+    </section>
+
+    <section id="screen-audit" class="screen hidden" data-screen="audit">
+      <header class="navbar">
+        <button type="button" id="auditBack" class="icon-btn" aria-label="Back">‹</button>
+        <h1 id="auditTitle" class="nav-title">Auditor</h1>
+        <span class="icon-btn spacer"></span>
+      </header>
+      <div class="error-slot hidden"></div>
+      <div id="auditLoading" class="skels">
+        <div class="skel skel-card"></div>
+      </div>
+      <div id="auditBody" class="stack hidden"></div>
+    </section>
+
+    <div id="searchOverlay" class="overlay hidden">
+      <div class="search-bar">
+        <input id="searchInput" type="search" placeholder="Name, symbol or mint" enterkeyhint="search">
+        <button type="button" id="searchClose" class="text-btn">Cancel</button>
+      </div>
+      <div id="searchResults" class="activity-list"></div>
+    </div>
+
+    <div id="toast" class="toast hidden" role="status"></div>
+
+    <nav class="tabbar" aria-label="Tabs">
+      <button type="button" data-tab="home" class="active">Home</button>
+      <button type="button" data-tab="agents">Agents</button>
+      <button type="button" data-tab="activity">Activity</button>
+      <button type="button" data-tab="account">Account</button>
+    </nav>
+  </div>
+
   <script src="chart.js"></script>
   <script src="app.js"></script>
 </body>

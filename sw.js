@@ -1,4 +1,4 @@
-const CACHE = "desk-shell-v3";
+const CACHE = "desk-shell-v4";
 const SHELL = ["./", "./index.html", "./app.css", "./app.js", "./chart.js", "./manifest.json"];
 
 self.addEventListener("install", function (event) {
