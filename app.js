@@ -1,5 +1,5 @@
 (function () {
-  const REPO = "geek7coin/desk";
+  const REPO = "geek7coin/desk-data";
   const REF = "data";
   const PATH_KEY = "desk_data_path";
   const TOKEN_KEY = "desk_gh_token";
