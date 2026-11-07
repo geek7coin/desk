@@ -57,19 +57,27 @@
     return JSON.parse(text);
   }
 
-  function renderState(state, chart, activity, coin) {
+  function renderState(state, chart, activity, coin, account, settingsFile) {
     document.getElementById("modeBadge").textContent = state.mode || "PAPER";
-    document.getElementById("equity").textContent = money(state.equity);
-    const pnl = Number(state.pnl || 0);
+    const balance = state.balance != null ? state.balance : state.equity;
+    document.getElementById("equity").textContent = money(balance);
+    const pnl = Number(state.today_pct != null ? state.today_pct : state.pnl || 0);
     const pnlEl = document.getElementById("pnl");
-    pnlEl.textContent = (pnl >= 0 ? "+" : "") + money(pnl);
+    pnlEl.textContent = (pnl >= 0 ? "+" : "") + Number(pnl).toFixed(2) + (state.today_pct != null ? "%" : "");
     pnlEl.className = "pnl " + (pnl >= 0 ? "up" : "down");
-    document.getElementById("asOf").textContent = "seq " + state.seq + " · " + state.time + " · PAPER";
+    document.getElementById("asOf").textContent = "seq " + state.seq + " · " + state.time + " · " + (state.mode || "PAPER");
+    const groups = (settingsFile && settingsFile.groups) || {};
+    const risk = groups.risk || {};
+    const exec = groups.executor || {};
     const settings = state.settings || {};
-    document.getElementById("stopPct").textContent = settings.stop_pct + "%";
-    document.getElementById("trailPct").textContent = settings.trail_pct + "%";
-    document.getElementById("stackPct").textContent = settings.stack_pct + "%";
-    document.getElementById("timeoutH").textContent = settings.timeout_h + "h";
+    const stop = (risk["risk.stop_pct"] && risk["risk.stop_pct"].value) || settings.stop_pct;
+    const trail = (risk["risk.trail_pct"] && risk["risk.trail_pct"].value) || settings.trail_pct;
+    const stack = (exec["executor.stack_pct"] && exec["executor.stack_pct"].value) || settings.stack_pct;
+    const timeout = (risk["risk.timeout_h"] && risk["risk.timeout_h"].value) || settings.timeout_h;
+    document.getElementById("stopPct").textContent = stop + "%";
+    document.getElementById("trailPct").textContent = trail + "%";
+    document.getElementById("stackPct").textContent = stack + "%";
+    document.getElementById("timeoutH").textContent = timeout + "h";
     if (typeof drawChart === "function") drawChart(document.getElementById("chart"), (chart && chart.points) || []);
     const list = document.getElementById("activity");
     list.innerHTML = "";
@@ -79,7 +87,7 @@
         const a = document.createElement("a");
         a.setAttribute("href", item.url);
         a.setAttribute("rel", "noopener noreferrer");
-        a.textContent = item.text || item.url;
+        a.textContent = item.text || item.title || item.url;
         li.appendChild(a);
       } else {
         li.textContent = item.text || "";
@@ -87,8 +95,9 @@
       list.appendChild(li);
     });
     const profile = document.getElementById("profileLink");
-    if (state.profile_url) {
-      profile.setAttribute("href", state.profile_url);
+    const profileUrl = (account && account.profile_url) || state.profile_url;
+    if (profileUrl) {
+      profile.setAttribute("href", profileUrl);
     }
     const card = document.getElementById("coinCard");
     if (coin) {
@@ -104,13 +113,16 @@
 
   async function refresh() {
     const state = await getJson("state.json");
-    const chart = await getJson("chart.json");
-    const activity = await getJson("activity.json");
+    const chart = await getJson("chart/LIVE.json").catch(function () { return getJson("chart.json"); });
+    const activity = await getJson("activity/0.json").catch(function () { return getJson("activity.json"); });
+    const account = await getJson("account.json").catch(function () { return {}; });
+    const settingsFile = await getJson("settings.json").catch(function () { return null; });
     let coin = null;
-    if (state.coins && state.coins[0]) {
-      try { coin = await getJson("coin/" + state.coins[0] + ".json"); } catch (e) { coin = null; }
+    const firstMint = state.cards && state.cards[0] && state.cards[0].feed && state.cards[0].feed[0] && state.cards[0].feed[0].mint;
+    if (firstMint) {
+      try { coin = await getJson("coin/" + firstMint + ".json"); } catch (e) { coin = null; }
     }
-    renderState(state, chart, activity, coin);
+    renderState(state, chart, activity, coin, account, settingsFile);
     showError("");
     document.title = "Desk · PAPER";
   }
